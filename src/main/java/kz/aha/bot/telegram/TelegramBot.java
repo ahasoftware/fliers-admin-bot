@@ -113,7 +113,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         if(user.getPreviousMessage() != null){
             if(langService.getMessage("reply.sendDiscount").equals(user.getPreviousMessage())){
                 try{
-                    defaultDictService.processCallbackQuery(request.getMessage().getText());
+                    defaultDictService.setDiscount(request.getMessage().getText());
+                    defaultDictService.sendAgreementToTable();
+                    defaultDictService.setParentCompany(null);
+                    defaultDictService.setChildCompany(null);
                     send(response, user, langService.getMessage("reply.agreementCreated"));
                 }catch (Exception e){
                     send(response, user, langService.getMessage("reply.agreementError"));
@@ -226,15 +229,31 @@ public class TelegramBot extends TelegramLongPollingBot {
                 default -> lang = KAZAKH;
             }
             chooseLang(lang, user);
-            sendPolicyInfo(chatId, user);
-        } else{
-            try{
-                defaultDictService.processCallbackQuery(param);
-            }catch (Exception e){
-                send(response, user, langService.getMessage("reply.agreementError"));
+            if(user.getPhoneNumber() == null){
+                sendPolicyInfo(chatId, user);
             }
-            createAgreement(user);
         }
+
+            try{
+                if(Integer.parseInt(param)>0){
+                    try {
+                        if(defaultDictService.getParentCompany() == null){
+                            defaultDictService.setParentCompany(param);
+                        } else if(defaultDictService.getChildCompany() == null){
+                            defaultDictService.setChildCompany(param);
+                        }
+                    } catch (Exception e){
+                    send(response, user, langService.getMessage("reply.agreementError"));
+                }
+                }
+
+            }catch (Exception e){
+
+            }
+            if(user.getPhoneNumber() != null){
+                createAgreement(user);
+            }
+
 
     }
 

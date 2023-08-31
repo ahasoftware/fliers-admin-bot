@@ -13,5 +13,5 @@ import java.util.List;
 @Service
 public interface DictService {
     List<List<InlineButton>> getDictCompanies(String locale);
-    public void processCallbackQuery(String query) throws NumberFormatException, SQLException;
+    public void sendAgreementToTable() throws NumberFormatException, SQLException;
 }

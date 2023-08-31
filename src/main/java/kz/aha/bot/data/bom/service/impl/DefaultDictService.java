@@ -56,25 +56,8 @@ public class DefaultDictService implements DictService {
         return toReply;
     }
 
-    public void processCallbackQuery(String query) throws NumberFormatException, SQLException {
-        // check if parent company is empty
-        if (this.parentCompany == null) {
-            this.parentCompany = query;
-        }
-        // check if child company  is empty
-        else if (this.childCompany == null) {
-            this.childCompany = query;
-        }
-        else {
-            this.discount = query;
-            sendAgreementToTable();
-            // reset all companies
-            this.parentCompany = null;
-            this.childCompany = null;
-        }
-    }
 
-    private void sendAgreementToTable() throws NumberFormatException, SQLException {
+    public void sendAgreementToTable() throws NumberFormatException, SQLException {
         try (Connection connection = DriverManager.getConnection(this.url, this.username, this.password)) {
             String insertQuery = "INSERT INTO comp_fliers.agreement (comp_parent_id, comp_child_id, discount) VALUES (?, ?, ?)";
             PreparedStatement preparedStatement = connection.prepareStatement(insertQuery);
