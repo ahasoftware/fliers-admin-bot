@@ -51,21 +51,23 @@ public class KeyboardHelper {
         Arrays.stream(commands)
                 .forEach(listOfCommand -> {
                             KeyboardRow row = new KeyboardRow();
-                            listOfCommand.stream().map(
+                            listOfCommand.forEach(
                                     command -> {
-                                        if (locationRequired) {
-                                            return KeyboardButton.builder()
+                                        if(command.equals("reply.sharePhoneNumber")){
+                                            if(phoneRequired) {
+                                                row.add(KeyboardButton.builder()
+                                                        .text(fromBundleResource ? langService.getMessage(command) : command)
+                                                        .requestContact(true)
+                                                        .build());
+                                            }
+                                        }else{
+                                            row.add(KeyboardButton.builder()
                                                     .text(fromBundleResource ? langService.getMessage(command) : command)
                                                     .requestLocation(locationRequired)
-                                                    .build();
-                                        } else {
-                                            return KeyboardButton.builder()
-                                                    .text(fromBundleResource ? langService.getMessage(command) : command)
-                                                    .requestContact(phoneRequired)
-                                                    .build();
+                                                    .build());
                                         }
                                     }
-                            ).forEach(row::add);
+                            );
                             keyboard.add(row);
                         }
                 );
@@ -105,10 +107,10 @@ public class KeyboardHelper {
         commands.forEach(innerCommands -> {
             List<InlineKeyboardButton> row = new ArrayList<>();
             innerCommands.stream().map(command ->
-                InlineKeyboardButton.builder()
-                        .callbackData(command.callbackData())
-                        .text(fromBundleResource ? langService.getMessage(command.name()) : command.name())
-                        .build()
+                    InlineKeyboardButton.builder()
+                            .callbackData(command.callbackData())
+                            .text(fromBundleResource ? langService.getMessage(command.name()) : command.name())
+                            .build()
             ).forEach(row::add);
             keyboard.add(row);
         });

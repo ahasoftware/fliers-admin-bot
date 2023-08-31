@@ -14,13 +14,10 @@ import java.util.List;
  * @author Akhmet.Sulemenov
  * created 28.06.2023
  */
-@Getter
-@Setter
 @Entity
-@Table(name = "agreement", schema = "dict_fliers")
-@AllArgsConstructor
+@Table(name = "agreement", schema = "comp_fliers")
 @NoArgsConstructor
-@Builder
+@Data
 public class Agreement {
 
     @Id

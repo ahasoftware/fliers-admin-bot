@@ -1,13 +1,12 @@
 package kz.aha.bot.telegram;
 
 import kz.aha.bot.data.bom.entity.User;
-import kz.aha.bot.data.bom.service.*;
+import kz.aha.bot.data.bom.service.UserService;
 import kz.aha.bot.data.bom.service.impl.DefaultDictService;
 import kz.aha.bot.service.LocaleMessageService;
 import kz.aha.bot.telegram.helper.TelegramHelper;
 import kz.aha.bot.util.AppUtils;
 import kz.aha.bot.util.enums.LanguageMode;
-import kz.aha.bot.util.record.InlineButton;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -18,17 +17,22 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.*;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
-import org.telegram.telegrambots.meta.api.objects.*;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
-import static kz.aha.bot.util.AppConstants.*;
+import static kz.aha.bot.util.AppConstants.GREETING_STICKER;
+import static kz.aha.bot.util.AppConstants.HELLO_STICKER;
 import static kz.aha.bot.util.enums.LanguageMode.*;
 
 /**
@@ -47,11 +51,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final LocaleMessageService langService;
     private final UserService userService;
     private final TelegramHelper helper;
-
     private final DefaultDictService defaultDictService;
+    private boolean serviceInProgress = false;
 
-    private String preMes;
-    private boolean check = false;
     @Value("${telegram-bot.name}")
     String botUsername;
     @Value("${telegram-bot.token}")
@@ -75,8 +77,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             langService.setLang(user.getLanguageMode());
         }
 
-        response.setReplyMarkup(helper.createReplyKeyboardMarkup(true, true, false, false,
-                    List.of("reply.sharePhoneNumber"), List.of("reply.help"),List.of("reply.dictCompanies")));
+        if(!serviceInProgress){
+            response.setReplyMarkup(helper.createReplyKeyboardMarkup(true, true, user.getPhoneNumber() == null, false,
+                    List.of("reply.sharePhoneNumber"), List.of("reply.help"),List.of("reply.createAgreement")));
+        }
 
         if (request.hasCallbackQuery()) {
             CallbackQuery callbackQuery = request.getCallbackQuery();
@@ -98,18 +102,26 @@ public class TelegramBot extends TelegramLongPollingBot {
             setPhone(request);
             return;
         }
-        if(check){
-            preMes = request.getMessage().getText();
-            check = false;
-        }
-        if (langService.getMessage("reply.dictCompanies").equals(request.getMessage().getText())){
-            showDictCompanies(user);
-            check = true;
+
+        // if create agreement button is pressed
+        if (langService.getMessage("reply.createAgreement").equals(request.getMessage().getText())){
+            this.serviceInProgress = true;
+            createAgreement(user);
         }
 
-        String curMes = request.getMessage().getText();
-        System.out.println(preMes);
-        System.out.println(curMes);
+        // if in the previous message bot asked for a discount
+        if(user.getPreviousMessage() != null){
+            if(langService.getMessage("reply.sendDiscount").equals(user.getPreviousMessage())){
+                try{
+                    defaultDictService.processCallbackQuery(request.getMessage().getText());
+                    send(response, user, langService.getMessage("reply.agreementCreated"));
+                }catch (Exception e){
+                    send(response, user, langService.getMessage("reply.agreementError"));
+                }
+                this.serviceInProgress = false;
+            }
+        }
+
         conditionInput(request, user);
     }
 
@@ -123,7 +135,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
         var command = update.getMessage().getText();
         var previousMessage = user.getPreviousMessage();
-        
+
         log.info("chatId {}, previousMessage {} = {}", response.getChatId(), previousMessage, response.getText());
         log.info("new command[text: {}, username: {}, from: {}, language: {}, previous bot message: {}]",
                 command, user.getTFirstName(), user.getUserId(), user.getLanguageMode(), previousMessage);
@@ -138,9 +150,25 @@ public class TelegramBot extends TelegramLongPollingBot {
             setPhone(command);
         }
     }
-    private void showDictCompanies(User user){
-        response.setReplyMarkup(helper.createInlineKeyboardMarkup(defaultDictService.getDictCompanies(langService.getLang()),false));
-        send(response, user, langService.getMessage("reply.chooseDictCompanies"));
+    private void createAgreement(User user){
+        // if child company was already chosen, then ask for discount
+        if(langService.getMessage("reply.chooseChildCompany").equals(user.getPreviousMessage())){
+            clearInlineMessageButtons();
+            send(response, user, langService.getMessage("reply.sendDiscount"));
+            return;
+        }
+        //create inline keyboard
+        response.setReplyMarkup(helper.createInlineKeyboardMarkup(
+                defaultDictService.getDictCompanies(langService.getLang()),false));
+
+        // if parent company was already chosen, then ask for child company
+        if(langService.getMessage("reply.chooseParentCompany").equals(user.getPreviousMessage())){
+            send(response, user, langService.getMessage("reply.chooseChildCompany"));
+        }
+        // if no parent company chosen, then ask for it
+        else{
+            send(response, user, langService.getMessage("reply.chooseParentCompany"));
+        }
     }
     /**
      * Выбор языка интерфейса
@@ -199,6 +227,13 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
             chooseLang(lang, user);
             sendPolicyInfo(chatId, user);
+        } else{
+            try{
+                defaultDictService.processCallbackQuery(param);
+            }catch (Exception e){
+                send(response, user, langService.getMessage("reply.agreementError"));
+            }
+            createAgreement(user);
         }
 
     }
@@ -213,7 +248,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 SendMessage.builder().chatId(chatId).replyMarkup(helper.createReplyKeyboardMarkup(
                                 true,
                                 true, user.getPhoneNumber() == null, false,
-                                List.of("reply.sharePhoneNumber"), List.of("reply.help"), List.of("reply.dictCompanies"),
+                                List.of("reply.sharePhoneNumber"), List.of("reply.help"), List.of("reply.createAgreement"),
                                 getReplyListAdmin(user, List.of("reply.reports"))))
                         .text(langService.getMessage("reply.policy"))
                         .build(), user, langService.getMessage("reply.policy")
@@ -289,6 +324,21 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             TimeUnit.MICROSECONDS.sleep(300);
             execute(deleteMessage);
+        } catch (TelegramApiException | InterruptedException tae) {
+            throw new RuntimeException(tae);
+        }
+    }
+
+    /**
+     * Редактируем сообщение
+     */
+    private void editMessage(String chatId, Integer messageId) {
+        EditMessageText editMessage = new EditMessageText(langService.getMessage("reply.chooseChildCompany"));
+        editMessage.setMessageId(messageId);
+        editMessage.setChatId(chatId);
+        try {
+            TimeUnit.MICROSECONDS.sleep(300);
+            execute(editMessage);
         } catch (TelegramApiException | InterruptedException tae) {
             throw new RuntimeException(tae);
         }
