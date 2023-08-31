@@ -47,7 +47,7 @@ public class LocaleMessageService {
         //log.info(this.locale.toLanguageTag());
     }
 
-    private String getLang() {
+    public String getLang() {
         return this.locale.toLanguageTag();
     }
 }

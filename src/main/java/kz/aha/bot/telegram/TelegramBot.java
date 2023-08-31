@@ -2,10 +2,12 @@ package kz.aha.bot.telegram;
 
 import kz.aha.bot.data.bom.entity.User;
 import kz.aha.bot.data.bom.service.*;
+import kz.aha.bot.data.bom.service.impl.DefaultDictService;
 import kz.aha.bot.service.LocaleMessageService;
 import kz.aha.bot.telegram.helper.TelegramHelper;
 import kz.aha.bot.util.AppUtils;
 import kz.aha.bot.util.enums.LanguageMode;
+import kz.aha.bot.util.record.InlineButton;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -46,6 +48,10 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final UserService userService;
     private final TelegramHelper helper;
 
+    private final DefaultDictService defaultDictService;
+
+    private String preMes;
+    private boolean check = false;
     @Value("${telegram-bot.name}")
     String botUsername;
     @Value("${telegram-bot.token}")
@@ -70,7 +76,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
         response.setReplyMarkup(helper.createReplyKeyboardMarkup(true, true, false, false,
-                    List.of("reply.sharePhoneNumber"), List.of("reply.help")));
+                    List.of("reply.sharePhoneNumber"), List.of("reply.help"),List.of("reply.dictCompanies")));
 
         if (request.hasCallbackQuery()) {
             CallbackQuery callbackQuery = request.getCallbackQuery();
@@ -92,7 +98,18 @@ public class TelegramBot extends TelegramLongPollingBot {
             setPhone(request);
             return;
         }
+        if(check){
+            preMes = request.getMessage().getText();
+            check = false;
+        }
+        if (langService.getMessage("reply.dictCompanies").equals(request.getMessage().getText())){
+            showDictCompanies(user);
+            check = true;
+        }
 
+        String curMes = request.getMessage().getText();
+        System.out.println(preMes);
+        System.out.println(curMes);
         conditionInput(request, user);
     }
 
@@ -121,7 +138,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             setPhone(command);
         }
     }
-
+    private void showDictCompanies(User user){
+        response.setReplyMarkup(helper.createInlineKeyboardMarkup(defaultDictService.getDictCompanies(langService.getLang()),false));
+        send(response, user, langService.getMessage("reply.chooseDictCompanies"));
+    }
     /**
      * Выбор языка интерфейса
      * @param lang language mode to update
@@ -193,7 +213,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 SendMessage.builder().chatId(chatId).replyMarkup(helper.createReplyKeyboardMarkup(
                                 true,
                                 true, user.getPhoneNumber() == null, false,
-                                List.of("reply.sharePhoneNumber"), List.of("reply.help"),
+                                List.of("reply.sharePhoneNumber"), List.of("reply.help"), List.of("reply.dictCompanies"),
                                 getReplyListAdmin(user, List.of("reply.reports"))))
                         .text(langService.getMessage("reply.policy"))
                         .build(), user, langService.getMessage("reply.policy")
