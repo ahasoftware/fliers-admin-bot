@@ -30,15 +30,6 @@ import java.util.List;
 @Setter
 public class DefaultDictService implements DictService {
     private final DictCompaniesRepository dictCompaniesRepository;
-    private String parentCompany;
-    private String childCompany;
-    private String discount;
-    @Value("${spring.datasource.url}")
-    private String url;
-    @Value("${spring.datasource.username}")
-    private String username;
-    @Value("${spring.datasource.password}")
-    private String password;
 
     public List<List<InlineButton>> getDictCompanies(String locale) {
         List<DictCompanies> companies = dictCompaniesRepository.findAll();  // get all rows from table
@@ -54,26 +45,5 @@ public class DefaultDictService implements DictService {
         List<List<InlineButton>> toReply = new ArrayList<>();
         toReply.add(buttonsList);
         return toReply;
-    }
-
-
-    public void sendAgreementToTable() throws NumberFormatException, SQLException {
-        try (Connection connection = DriverManager.getConnection(this.url, this.username, this.password)) {
-            String insertQuery = "INSERT INTO comp_fliers.agreement (comp_parent_id, comp_child_id, discount) VALUES (?, ?, ?)";
-            PreparedStatement preparedStatement = connection.prepareStatement(insertQuery);
-
-            // Set values
-            preparedStatement.setLong(1, Long.parseLong(this.parentCompany));   // parent company
-            preparedStatement.setLong(2, Long.parseLong(this.childCompany));    // child company
-            preparedStatement.setLong(3, Long.parseLong(this.discount));        // discount
-
-            // Execute the query
-            int rowsAffected = preparedStatement.executeUpdate();
-            log.info("{} row(-s) were added to agreement table", rowsAffected);
-        } catch (SQLException e) {
-            log.info(e.getMessage());
-            e.printStackTrace();
-            throw e;
-        }
     }
 }

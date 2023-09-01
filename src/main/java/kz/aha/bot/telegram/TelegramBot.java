@@ -2,6 +2,7 @@ package kz.aha.bot.telegram;
 
 import kz.aha.bot.data.bom.entity.User;
 import kz.aha.bot.data.bom.service.UserService;
+import kz.aha.bot.data.bom.service.impl.DefaultAgreementService;
 import kz.aha.bot.data.bom.service.impl.DefaultDictService;
 import kz.aha.bot.service.LocaleMessageService;
 import kz.aha.bot.telegram.helper.TelegramHelper;
@@ -52,6 +53,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final UserService userService;
     private final TelegramHelper helper;
     private final DefaultDictService defaultDictService;
+    private final DefaultAgreementService defaultAgreementService;
     private boolean serviceInProgress = false;
 
     @Value("${telegram-bot.name}")
@@ -113,10 +115,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         if(user.getPreviousMessage() != null){
             if(langService.getMessage("reply.sendDiscount").equals(user.getPreviousMessage())){
                 try{
-                    defaultDictService.setDiscount(request.getMessage().getText());
-                    defaultDictService.sendAgreementToTable();
-                    defaultDictService.setParentCompany(null);
-                    defaultDictService.setChildCompany(null);
+                    defaultAgreementService.setDiscount(request.getMessage().getText());
+                    defaultAgreementService.sendAgreementToTable();
+                    defaultAgreementService.setParentCompany(null);
+                    defaultAgreementService.setChildCompany(null);
                     send(response, user, langService.getMessage("reply.agreementCreated"));
                 }catch (Exception e){
                     send(response, user, langService.getMessage("reply.agreementError"));
@@ -237,10 +239,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             try{
                 if(Integer.parseInt(param)>0){
                     try {
-                        if(defaultDictService.getParentCompany() == null){
-                            defaultDictService.setParentCompany(param);
-                        } else if(defaultDictService.getChildCompany() == null){
-                            defaultDictService.setChildCompany(param);
+                        if(defaultAgreementService.getParentCompany() == null){
+                            defaultAgreementService.setParentCompany(param);
+                        } else if(defaultAgreementService.getChildCompany() == null){
+                            defaultAgreementService.setChildCompany(param);
                         }
                     } catch (Exception e){
                     send(response, user, langService.getMessage("reply.agreementError"));
