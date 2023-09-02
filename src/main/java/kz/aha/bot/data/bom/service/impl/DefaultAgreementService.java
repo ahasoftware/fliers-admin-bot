@@ -1,5 +1,7 @@
 package kz.aha.bot.data.bom.service.impl;
 
+import kz.aha.bot.data.bom.entity.Agreement;
+import kz.aha.bot.data.bom.repository.AgreementRepository;
 import kz.aha.bot.data.bom.service.AgreementService;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +14,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -28,6 +31,8 @@ public class DefaultAgreementService implements AgreementService {
     private String username;
     @Value("${spring.datasource.password}")
     private String password;
+
+    private final AgreementRepository agreementRepository;
 
     public void sendAgreementToTable() throws NumberFormatException, SQLException {
         try (Connection connection = DriverManager.getConnection(this.url, this.username, this.password)) {
@@ -48,6 +53,18 @@ public class DefaultAgreementService implements AgreementService {
             throw e;
         }
         this.resetFields();
+    }
+
+    @Override
+    public long getDiscountById(long agreementId) {
+        List<Agreement> agreements = agreementRepository.findAll();
+        long answer = 0;
+        for(Agreement agreement: agreements){
+            if(agreement.getId() == agreementId){
+                answer = agreement.getDiscount();
+            }
+        }
+        return answer;
     }
 
     public void resetFields(){

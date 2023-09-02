@@ -25,11 +25,14 @@ public class Agreement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "comp_first_id")
-    private Long comp_first_id;
+    @Column(name = "comp_parent_id")
+    private Long comp_parent_id;
 
-    @Column(name = "comp_second_id")
-    private Long comp_second_id;
+    @Column(name = "comp_child_id")
+    private Long comp_child_id;
+
+    @Column(name = "discount")
+    private Long discount;
     public Agreement(Long id) {
         this.id = id;
     }

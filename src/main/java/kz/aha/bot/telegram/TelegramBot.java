@@ -4,6 +4,7 @@ import kz.aha.bot.data.bom.entity.User;
 import kz.aha.bot.data.bom.service.UserService;
 import kz.aha.bot.data.bom.service.impl.DefaultAgreementService;
 import kz.aha.bot.data.bom.service.impl.DefaultDictService;
+import kz.aha.bot.data.bom.service.impl.DefaultFliersService;
 import kz.aha.bot.service.LocaleMessageService;
 import kz.aha.bot.telegram.helper.TelegramHelper;
 import kz.aha.bot.util.AppUtils;
@@ -55,6 +56,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final DefaultDictService defaultDictService;
     private final DefaultAgreementService defaultAgreementService;
     private boolean serviceInProgress = false;
+    private final DefaultFliersService defaultFliersService;
 
     @Value("${telegram-bot.name}")
     String botUsername;
@@ -81,7 +83,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         if(!serviceInProgress){
             response.setReplyMarkup(helper.createReplyKeyboardMarkup(true, true, user.getPhoneNumber() == null, false,
-                    List.of("reply.sharePhoneNumber"), List.of("reply.help"),List.of("reply.createAgreement")));
+                    List.of("reply.sharePhoneNumber"), List.of("reply.checkPromoCode"),List.of("reply.createAgreement")));
         }
 
         if (request.hasCallbackQuery()) {
@@ -89,7 +91,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             log.info("New callbackQuery from User: {}, userId: {}, with data: {}", callbackQuery.getFrom().getFirstName(),
                     callbackQuery.getFrom().getId(), callbackQuery.getData());
             response.setChatId(callbackQuery.getMessage().getChatId());
-            processCallbackQuery(callbackQuery, user);
+            processCallbackQuery(callbackQuery, user, request);
             return;
         }
 
@@ -125,6 +127,13 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
                 this.serviceInProgress = false;
             }
+        }
+        if(langService.getMessage("reply.replyCheckPromoCode").equals(user.getPreviousMessage())){
+            long agreementId =  checkPromoCode(user, request.getMessage().getText());
+            checkAgreement(agreementId, user);
+        }
+        if(langService.getMessage("reply.checkPromoCode").equals((request.getMessage().getText()))){
+            send(response, user, langService.getMessage("reply.replyCheckPromoCode" ));
         }
 
         conditionInput(request, user);
@@ -175,6 +184,21 @@ public class TelegramBot extends TelegramLongPollingBot {
             send(response, user, langService.getMessage("reply.chooseParentCompany"));
         }
     }
+    private void checkAgreement(long agreementId, User user){
+        Long discount  = defaultAgreementService.getDiscountById(agreementId);
+        String command;
+        if(discount>0){
+            command = langService.getMessage("reply.correctPromoCode") + " " + discount +"%";
+        } else {
+            command = langService.getMessage("reply.wrongPromoCode");
+        }
+        send(response, user, command);
+
+    }
+
+    private long checkPromoCode(User user, String promoCode){
+        return defaultFliersService.getAgreementID(promoCode);
+    }
     /**
      * Выбор языка интерфейса
      * @param lang language mode to update
@@ -213,7 +237,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         send(response, user.get(), langService.getMessage("reply.phoneConfirmed"));
     }
 
-    private void processCallbackQuery(CallbackQuery buttonQuery, User user) {
+    private void processCallbackQuery(CallbackQuery buttonQuery, User user, Update request) {
         final long chatId = buttonQuery.getMessage().getChatId();
         final String param = buttonQuery.getData();
         response.setChatId(chatId);
@@ -236,25 +260,25 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
         }
 
-            try{
-                if(Integer.parseInt(param)>0){
-                    try {
-                        if(defaultAgreementService.getParentCompany() == null){
-                            defaultAgreementService.setParentCompany(param);
-                        } else if(defaultAgreementService.getChildCompany() == null){
-                            defaultAgreementService.setChildCompany(param);
-                        }
-                    } catch (Exception e){
+        try{
+             if(Integer.parseInt(param)>0){
+                 try {
+                     if(defaultAgreementService.getParentCompany() == null){
+                         defaultAgreementService.setParentCompany(param);
+                     } else if(defaultAgreementService.getChildCompany() == null){
+                         defaultAgreementService.setChildCompany(param);
+                     }
+                 } catch (Exception e){
                     send(response, user, langService.getMessage("reply.agreementError"));
-                }
-                }
+                    }
+             }
 
-            }catch (Exception e){
+        }catch (Exception e){}
 
-            }
-            if(user.getPhoneNumber() != null){
-                createAgreement(user);
-            }
+
+        if (user.getPhoneNumber() != null ) {
+            createAgreement(user);
+        }
 
 
     }
@@ -269,7 +293,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 SendMessage.builder().chatId(chatId).replyMarkup(helper.createReplyKeyboardMarkup(
                                 true,
                                 true, user.getPhoneNumber() == null, false,
-                                List.of("reply.sharePhoneNumber"), List.of("reply.help"), List.of("reply.createAgreement"),
+                                List.of("reply.sharePhoneNumber"), List.of("reply.createAgreement"),
                                 getReplyListAdmin(user, List.of("reply.reports"))))
                         .text(langService.getMessage("reply.policy"))
                         .build(), user, langService.getMessage("reply.policy")

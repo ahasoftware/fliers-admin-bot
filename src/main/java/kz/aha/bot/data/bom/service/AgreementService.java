@@ -7,4 +7,5 @@ import java.sql.SQLException;
 @Service
 public interface AgreementService {
     void sendAgreementToTable() throws NumberFormatException, SQLException;
+    long getDiscountById(long agreementId);
 }
