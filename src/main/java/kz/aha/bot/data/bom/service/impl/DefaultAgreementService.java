@@ -55,16 +55,8 @@ public class DefaultAgreementService implements AgreementService {
         this.resetFields();
     }
 
-    @Override
-    public long getDiscountById(long agreementId) {
-        List<Agreement> agreements = agreementRepository.findAll();
-        long answer = 0;
-        for(Agreement agreement: agreements){
-            if(agreement.getId() == agreementId){
-                answer = agreement.getDiscount();
-            }
-        }
-        return answer;
+    public long getDiscountByAgreementId(long agreementId) {
+        return agreementRepository.findAgreementById(agreementId).get().getDiscount();
     }
 
     public void resetFields(){

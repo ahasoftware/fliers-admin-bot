@@ -15,25 +15,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DefaultFliersService implements FliersService {
    private final FliersRepository fliersRepository;
-   long answer = 0;
-   long counter;
 
-
-
-
-    @Override
     public Long getAgreementID(String promoCode) {
-        List<Fliers> fliers = fliersRepository.findAll();
-
-        for (Fliers flier : fliers) {
-            if(flier.getPromoCode().equals(promoCode)){
-                answer = flier.getAgreement_id();
-                counter = flier.getCounter();
-                counter++;
-                flier.setCounter(counter);
-            }
-        }
-
-        return answer;
+        return fliersRepository.findFliersByPromoCode(promoCode).get().getAgreementId();
     }
 }

@@ -5,5 +5,4 @@ import org.jvnet.hk2.annotations.Service;
 import java.util.List;
 @Service
 public interface FliersService {
-    Long getAgreementID(String promoCode);
 }

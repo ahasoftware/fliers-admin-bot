@@ -1,18 +1,19 @@
 package kz.aha.bot.data.bom.entity;
 
-
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.*;
+
 @Data
 @Entity
 @Table(name = "fliers", schema = "comp_fliers")
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Fliers {
 
     @Id
@@ -21,7 +22,7 @@ public class Fliers {
     private Long id;
 
     @Column(name = "user_id")
-    private Long user_id;
+    private Long userId;
 
     @Column(name = "promo_code")
     private String promoCode;
@@ -30,9 +31,10 @@ public class Fliers {
     private Long counter;
 
     @Column(name = "agreement_id")
-    private Long agreement_id;
+    private Long agreementId;
 
-    public Fliers(Long id) {
-        this.id = id;
-    }
+//    @ToString.Exclude
+//    @ManyToOne
+//    @JoinColumn(name = "agreement_id")
+//    private Agreement agreement;
 }

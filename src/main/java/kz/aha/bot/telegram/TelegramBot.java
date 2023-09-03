@@ -116,6 +116,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         // if in the previous message bot asked for a discount
         if(user.getPreviousMessage() != null){
             if(langService.getMessage("reply.sendDiscount").equals(user.getPreviousMessage())){
+                this.serviceInProgress = false;
                 try{
                     defaultAgreementService.setDiscount(request.getMessage().getText());
                     defaultAgreementService.sendAgreementToTable();
@@ -125,13 +126,12 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }catch (Exception e){
                     send(response, user, langService.getMessage("reply.agreementError"));
                 }
-                this.serviceInProgress = false;
+            }else if(langService.getMessage("reply.replyCheckPromoCode").equals(user.getPreviousMessage())){
+                long agreementId =  checkPromoCode(request.getMessage().getText());
+                checkAgreement(agreementId, user);
             }
         }
-        if(langService.getMessage("reply.replyCheckPromoCode").equals(user.getPreviousMessage())){
-            long agreementId =  checkPromoCode(user, request.getMessage().getText());
-            checkAgreement(agreementId, user);
-        }
+
         if(langService.getMessage("reply.checkPromoCode").equals((request.getMessage().getText()))){
             send(response, user, langService.getMessage("reply.replyCheckPromoCode" ));
         }
@@ -185,7 +185,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
     private void checkAgreement(long agreementId, User user){
-        Long discount  = defaultAgreementService.getDiscountById(agreementId);
+        Long discount  = defaultAgreementService.getDiscountByAgreementId(agreementId);
         String command;
         if(discount>0){
             command = langService.getMessage("reply.correctPromoCode") + " " + discount +"%";
@@ -196,7 +196,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     }
 
-    private long checkPromoCode(User user, String promoCode){
+    private long checkPromoCode(String promoCode){
         return defaultFliersService.getAgreementID(promoCode);
     }
     /**
@@ -255,29 +255,20 @@ public class TelegramBot extends TelegramLongPollingBot {
                 default -> lang = KAZAKH;
             }
             chooseLang(lang, user);
-            if(user.getPhoneNumber() == null){
-                sendPolicyInfo(chatId, user);
-            }
-        }
-
-        try{
-             if(Integer.parseInt(param)>0){
-                 try {
-                     if(defaultAgreementService.getParentCompany() == null){
-                         defaultAgreementService.setParentCompany(param);
-                     } else if(defaultAgreementService.getChildCompany() == null){
-                         defaultAgreementService.setChildCompany(param);
-                     }
-                 } catch (Exception e){
-                    send(response, user, langService.getMessage("reply.agreementError"));
+            sendPolicyInfo(chatId, user);
+        }else {
+            try {
+                if (Long.parseLong(param) > 0) {
+                    if (defaultAgreementService.getParentCompany() == null) {
+                        defaultAgreementService.setParentCompany(param);
+                    } else if (defaultAgreementService.getChildCompany() == null) {
+                        defaultAgreementService.setChildCompany(param);
                     }
-             }
-
-        }catch (Exception e){}
-
-
-        if (user.getPhoneNumber() != null ) {
-            createAgreement(user);
+                    this.createAgreement(user);
+                }
+            } catch (Exception e) {
+                send(response, user, langService.getMessage("reply.denyPromoCode"));
+            }
         }
 
 
@@ -293,7 +284,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 SendMessage.builder().chatId(chatId).replyMarkup(helper.createReplyKeyboardMarkup(
                                 true,
                                 true, user.getPhoneNumber() == null, false,
-                                List.of("reply.sharePhoneNumber"), List.of("reply.createAgreement"),
+                                List.of("reply.sharePhoneNumber"),List.of("reply.checkPromoCode"), List.of("reply.createAgreement"),
                                 getReplyListAdmin(user, List.of("reply.reports"))))
                         .text(langService.getMessage("reply.policy"))
                         .build(), user, langService.getMessage("reply.policy")

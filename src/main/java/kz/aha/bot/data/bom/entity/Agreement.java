@@ -16,7 +16,9 @@ import java.util.List;
  */
 @Entity
 @Table(name = "agreement", schema = "comp_fliers")
+@AllArgsConstructor
 @NoArgsConstructor
+@Builder
 @Data
 public class Agreement {
 
@@ -26,16 +28,22 @@ public class Agreement {
     private Long id;
 
     @Column(name = "comp_parent_id")
-    private Long comp_parent_id;
+    private Long compParentId;
 
     @Column(name = "comp_child_id")
-    private Long comp_child_id;
+    private Long compChildId;
 
     @Column(name = "discount")
     private Long discount;
-    public Agreement(Long id) {
-        this.id = id;
-    }
 
+//    @JsonIgnore
+//    @OneToMany(
+//            cascade = CascadeType.ALL,
+//            mappedBy = "agreement",
+//            orphanRemoval = true,
+//            fetch= FetchType.EAGER
+//    )
+//    @Fetch(value = FetchMode.SUBSELECT)
+//    private List<Fliers> fliers;
 }
 
